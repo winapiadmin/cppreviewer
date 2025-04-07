@@ -30,46 +30,42 @@ struct FunctionInfo {
 void collect_functions(TSNode node, const std::string& code, std::vector<FunctionInfo>& functions) {
     std::string node_type = ts_node_type(node);
 
-    // Handle template_declaration as a wrapper
-    if (node_type == "template_declaration") {
-        // Step into the templated function node
-        if (ts_node_child_count(node) >= 2) {
-            TSNode inner_node = ts_node_child(node, 2);
-            collect_functions(inner_node, code, functions);
-        }
-    }
+    // Removed special handling for template_declaration so that template functions get processed
 
     if (node_type == "function_definition" || node_type == "function_declaration") {
-        std::string function_name;
-        std::string declaration_text;
-
-        // Extract function declarator
-        TSNode return_type = ts_node_child(node, 0);
-        TSNode declarator_node = ts_node_child(node, 1);
-
-        if (std::string(ts_node_type(declarator_node)) == "function_declarator") {
-            // First child of function_declarator is usually the identifier
-            TSNode identifier_node = ts_node_child(declarator_node, 0);
-            function_name = ts_node_string(identifier_node, code);
-
-            // Build declaration
-            size_t start_byte = ts_node_start_byte(return_type);
-            size_t end_byte = ts_node_end_byte(declarator_node);
-            declaration_text = code.substr(start_byte, end_byte - start_byte) + ";";
+        // Try to find the function_declarator among the children
+        TSNode declarator_node;
+        uint32_t child_count = ts_node_child_count(node);
+        for (uint32_t i = 0; i < child_count; ++i) {
+            TSNode child = ts_node_child(node, i);
+            if (std::string(ts_node_type(child)) == "function_declarator") {
+                declarator_node = child;
+                break;
+            }
         }
+        if (!ts_node_is_null(declarator_node)) {
+            // Recursively search for the identifier node
+            TSNode identifier_node = find_identifier(declarator_node);
+            std::string function_name = ts_node_string(identifier_node, code);
 
-        if (!function_name.empty()) {
-            auto it = std::find_if(functions.begin(), functions.end(), [&function_name](const FunctionInfo& info) {
-                return info.name == function_name;
-            });
+            // Build declaration using start of first child and end of declarator_node
+            TSNode first_child = ts_node_child(node, 0);
+            size_t start_byte = ts_node_start_byte(first_child);
+            size_t end_byte = ts_node_end_byte(declarator_node);
+            std::string declaration_text = code.substr(start_byte, end_byte - start_byte) + ";";
 
-            if (it == functions.end()) {
-                functions.push_back(FunctionInfo{function_name, declaration_text});
+            if (!function_name.empty()) {
+                auto it = std::find_if(functions.begin(), functions.end(), [&function_name](const FunctionInfo& info) {
+                    return info.name == function_name;
+                });
+                if (it == functions.end()) {
+                    functions.push_back(FunctionInfo{function_name, declaration_text});
+                }
             }
         }
     }
 
-    // Recurse into children
+    // Recursively process all children
     uint32_t total_children = ts_node_child_count(node);
     for (uint32_t i = 0; i < total_children; ++i) {
         TSNode child = ts_node_child(node, i);

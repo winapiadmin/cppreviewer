@@ -102,8 +102,15 @@ void analyze_code(const std::string &code, AnalysisResult &result) {
             std::string func_name = ts_node_string(func_node);
             // Handle deallocation functions like free()
             if (dealloc_functions.count(func_name)) {
-                TSNode args_node = ts_node_child(node, 1); // Assuming argument_list is the second child
-                if (!ts_node_is_null(args_node) && ts_node_type(args_node) == "argument_list") {
+                TSNode args_node;
+                for (uint32_t i = 0; i < ts_node_child_count(node); i++) {
+                    TSNode child = ts_node_child(node, i);
+                    if (ts_node_type(child) == "argument_list") {
+                        args_node = child;
+                        break;
+                    }
+                }
+                if (!ts_node_is_null(args_node)) {
                     TSNode first_arg = ts_node_child(args_node, 0);
                     if (!ts_node_is_null(first_arg)) {
                         std::string var_name = ts_node_string(first_arg);
@@ -120,7 +127,7 @@ void analyze_code(const std::string &code, AnalysisResult &result) {
                     }
                 }
             }
-            // Check for sort-like functions
+            // Removed greedy check for sort functions to focus on memory leaks.
             if (func_name.find("sort") != std::string::npos) {
                 result.add_warning("Possible greedy approach detected. Consider DP if optimization is needed.");
             }
@@ -141,9 +148,7 @@ void analyze_code(const std::string &code, AnalysisResult &result) {
             } else if (rhs_type == "new_expression") {
                 if (ts_node_type(lhs) == "identifier") {
                     std::string var_name = ts_node_string(lhs);
-                    allocation_count[var_name]++;
-                    allocated_pointers[var_name] = "new";
-                }
+        }
             }
         } else if (type == "function_declarator") {
             std::string func_name = ts_node_string(node);

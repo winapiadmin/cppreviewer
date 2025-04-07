@@ -11,7 +11,7 @@ set(CMAKE_BUILD_TYPE Debug)
 # Include headers
 include_directories(
     ${CMAKE_SOURCE_DIR}/tree-sitter
-    ${CMAKE_SOURCE_DIR}/tree-sitter-cpp
+    #${CMAKE_SOURCE_DIR}/tree-sitter-cpp
 )
 
 # Compiler-specific flags
@@ -38,3 +38,8 @@ target_compile_definitions(reviewer PRIVATE TREE_SITTER_STATIC)
 add_executable(xrefparser xref.cpp)
 target_link_libraries(xrefparser PRIVATE ${STATIC_LIBS})
 target_compile_definitions(xrefparser PRIVATE TREE_SITTER_STATIC)
+
+# xrefparser target
+add_executable(nodeprinter print.cpp)
+target_link_libraries(nodeprinter PRIVATE ${STATIC_LIBS})
+target_compile_definitions(nodeprinter PRIVATE TREE_SITTER_STATIC)

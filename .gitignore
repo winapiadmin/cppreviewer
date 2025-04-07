@@ -1,0 +1,10 @@
+# Ignore all static library files
+*.a
+*.lib
+
+# Ignore build directories created by CMake
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
